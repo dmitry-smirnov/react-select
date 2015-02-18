@@ -144,16 +144,10 @@ var MultiSelectField = React.createClass({
   }
 });
 
-var SelectedValuesField = React.createClass({
-  displayName: "SelectedValuesField",
-
-
-  onLabelClick: function (data, event) {
-    console.log(data);
-  },
-
+var PrePopulatedField = React.createClass({
+  displayName: "PrePopulatedField",
   render: function () {
-    var ops = [{ label: "Chocolate", value: "chocolate" }, { label: "Vanilla", value: "vanilla" }, { label: "Strawberry", value: "strawberry" }, { label: "Caramel", value: "caramel" }, { label: "Cookies and Cream", value: "cookiescream" }, { label: "Peppermint", value: "peppermint" }];
+    var ops = [{ label: "Chocolate", value: "chocolate", selected: true }, { label: "Vanilla", value: "vanilla" }, { label: "Strawberry", value: "strawberry", selected: true }, { label: "Caramel", value: "caramel", selected: true }, { label: "Cookies and Cream", value: "cookiescream" }, { label: "Peppermint", value: "peppermint" }];
     return React.createElement(
       "div",
       null,
@@ -162,13 +156,31 @@ var SelectedValuesField = React.createClass({
         null,
         this.props.label
       ),
-      React.createElement(Select, {
-        onOptionLabelClick: this.onLabelClick,
-        value: "chocolate,vanilla,strawberry",
-        multi: true,
-        placeholder: "Select your favourite(s)",
-        options: ops,
-        onChange: logChange })
+      React.createElement(Select, { multi: true, options: ops })
+    );
+  }
+});
+
+var RemoteSelectedField = React.createClass({
+  displayName: "RemoteSelectedField",
+  loadOptions: function (input, callback) {
+    setTimeout(function () {
+      callback(null, {
+        options: [{ label: "Chocolate", value: "chocolate", selected: true }, { label: "Vanilla", value: "vanilla" }, { label: "Strawberry", value: "strawberry", selected: true }, { label: "Caramel", value: "caramel", selected: true }, { label: "Cookies and Cream", value: "cookiescream" }, { label: "Peppermint", value: "peppermint" }],
+        complete: true
+      });
+    }, 500);
+  },
+  render: function () {
+    return React.createElement(
+      "div",
+      null,
+      React.createElement(
+        "label",
+        null,
+        this.props.label
+      ),
+      React.createElement(Select, { multi: true, asyncOptions: this.loadOptions, className: "remote-example" })
     );
   }
 });
@@ -177,7 +189,8 @@ var SelectedValuesField = React.createClass({
 React.render(React.createElement(
   "div",
   null,
-  React.createElement(SelectedValuesField, { label: "Clickable labels (labels as links):" }),
+  React.createElement(PrePopulatedField, { label: "Pre populated field" }),
+  React.createElement(RemoteSelectedField, { label: "Pre populated field (from remote)" }),
   React.createElement(StatesField, null),
   React.createElement(StatesField, { label: "States (non-searchable):", searchable: false }),
   React.createElement(MultiSelectField, { label: "Multiselect:" }),

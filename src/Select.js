@@ -89,11 +89,37 @@ var Select = React.createClass({
 	componentWillMount: function() {
 		this._optionsCache = {};
 		this._optionsFilterString = '';
-		this.setState(this.getStateFromValue(this.props.value));
+		
+		this.setState(this.getStateFromValue((this.getOptionsSelected() + (this.props.value || [])) || undefined));
 
 		if (this.props.asyncOptions && this.props.autoload) {
 			this.autoloadAsyncOptions();
 		}
+	},
+
+	/*
+	 * More handy way to select options via selected: true
+	 * 
+	 * var ops = [
+	 *  { label: 'Chocolate', value: 'chocolate', selected: true },
+	 *  { label: 'Vanilla', value: 'vanilla' },
+	 *  { label: 'Strawberry', value: 'strawberry', selected: true },
+	 *  { label: 'Caramel', value: 'caramel', selected: true },
+	 *  { label: 'Cookies and Cream', value: 'cookiescream' },
+	 *  { label: 'Peppermint', value: 'peppermint' }
+	 *  ];
+	 * 
+	 * */
+	getOptionsSelected: function () {
+		var optionsSelected = [];
+
+		(this.props.options || []).map(function(option) {
+			if (option.selected) {
+				optionsSelected.push(option.value);
+			}
+		}, this);
+		
+		return optionsSelected.join(',');
 	},
 
 	componentWillUnmount: function() {
@@ -150,9 +176,9 @@ var Select = React.createClass({
 
 		var values = this.initValuesArray(value, options),
 			filteredOptions = this.filterOptions(options, values);
-
+		
 		return {
-			value: values.map(function(v) { return v.value; }).join(this.props.delimiter),
+			value: this.getValuesAsString(values),
 			values: values,
 			inputValue: '',
 			filteredOptions: filteredOptions,
@@ -171,7 +197,7 @@ var Select = React.createClass({
 				values = values ? [values] : [];
 			}
 		}
-
+		
 		return values.map(function(val) {
 			return ('string' === typeof val) ? val = _.findWhere(options, { value: val }) || { value: val, label: val } : val;
 		}.bind(this));
@@ -346,6 +372,10 @@ var Select = React.createClass({
 		this.loadAsyncOptions('', {}, function() {});
 	},
 
+	getValuesAsString: function (values) {
+		return values.map(function(v) { return v.value; }).join(this.props.delimiter);
+	},
+	
 	loadAsyncOptions: function(input, state) {
 
 		for (var i = 0; i <= input.length; i++) {
@@ -363,13 +393,27 @@ var Select = React.createClass({
 		var thisRequestId = this._currentRequestId = requestId++;
 
 		this.props.asyncOptions(input, function(err, data) {
-
+			var optionsSelected = [];
+			
 			this._optionsCache[input] = data;
 
 			if (thisRequestId !== this._currentRequestId) {
 				return;
 			}
-
+			
+			data.options.map(function (option) {
+				if (option.selected) {
+					optionsSelected.push(option);
+				}
+			});
+			
+			if (optionsSelected) {
+				this.setState({
+					value: this.getValuesAsString(optionsSelected),
+					values: optionsSelected
+				});
+			}
+			
 			this.setState(_.extend({
 				options: data.options,
 				filteredOptions: this.filterOptions(data.options)
@@ -383,7 +427,7 @@ var Select = React.createClass({
 		if (!this.props.searchable) {
 			return options;
 		}
-
+		
 		var filterValue = this._optionsFilterString;
 		var exclude = (values || this.state.values).map(function(i) {
 			return i.value;

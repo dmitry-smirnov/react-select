@@ -129,30 +129,45 @@ var MultiSelectField = React.createClass({
 	}
 });
 
-var SelectedValuesField = React.createClass({
-
-	onLabelClick: function (data, event) {
-		console.log(data);
-	},
-	
+var PrePopulatedField = React.createClass({
 	render: function() {
 		var ops = [
-			{ label: 'Chocolate', value: 'chocolate' },
+			{ label: 'Chocolate', value: 'chocolate', selected: true },
 			{ label: 'Vanilla', value: 'vanilla' },
-			{ label: 'Strawberry', value: 'strawberry' },
-			{ label: 'Caramel', value: 'caramel' },
+			{ label: 'Strawberry', value: 'strawberry', selected: true },
+			{ label: 'Caramel', value: 'caramel', selected: true },
 			{ label: 'Cookies and Cream', value: 'cookiescream' },
 			{ label: 'Peppermint', value: 'peppermint' }
 		];
 		return <div>
 			<label>{this.props.label}</label>
-			<Select
-				onOptionLabelClick={this.onLabelClick}
-				value="chocolate,vanilla,strawberry"
-				multi={true}
-				placeholder="Select your favourite(s)"
-				options={ops}
-				onChange={logChange} />
+			<Select multi={true} options={ops} />
+		</div>;
+	}
+});
+
+var RemoteSelectedField = React.createClass({
+	loadOptions: function(input, callback) {
+
+		setTimeout(function() {
+			callback(null, {
+				options: [
+					{ label: 'Chocolate', value: 'chocolate', selected: true },
+					{ label: 'Vanilla', value: 'vanilla' },
+					{ label: 'Strawberry', value: 'strawberry', selected: true },
+					{ label: 'Caramel', value: 'caramel', selected: true },
+					{ label: 'Cookies and Cream', value: 'cookiescream' },
+					{ label: 'Peppermint', value: 'peppermint' }
+				],
+				complete: true
+			});
+		}, 500);
+
+	},
+	render: function() {
+		return <div>
+			<label>{this.props.label}</label>
+			<Select multi={true} asyncOptions={this.loadOptions} className="remote-example" />
 		</div>;
 	}
 });
@@ -160,7 +175,8 @@ var SelectedValuesField = React.createClass({
 
 React.render(
 	<div>
-		<SelectedValuesField label="Clickable labels (labels as links):" />
+		<PrePopulatedField label="Pre populated field" />
+		<RemoteSelectedField label="Pre populated field (from remote)" />
 		<StatesField />
 		<StatesField label="States (non-searchable):" searchable={false} />
 		<MultiSelectField label="Multiselect:"/>
