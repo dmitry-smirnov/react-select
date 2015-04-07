@@ -156,7 +156,7 @@ var PrePopulatedField = React.createClass({
         null,
         this.props.label
       ),
-      React.createElement(Select, { multi: true, options: ops })
+      React.createElement(Select, { onLabel: true, multi: true, options: ops })
     );
   }
 });
