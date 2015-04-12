@@ -139,9 +139,19 @@ var PrePopulatedField = React.createClass({
 			{ label: 'Cookies and Cream', value: 'cookiescream' },
 			{ label: 'Peppermint', value: 'peppermint' }
 		];
+		
+		function onChange(nv) {
+			console.log(nv);
+		}
+		
 		return <div>
 			<label>{this.props.label}</label>
-			<Select onLabel multi={true} options={ops} />
+			<Select
+				onOptionSelected={onChange}
+				createNewFromUndefined={true}
+				newLabelPattern='create user %option'
+				multi={true}
+				options={ops} />
 		</div>;
 	}
 });
