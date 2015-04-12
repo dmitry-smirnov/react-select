@@ -33,6 +33,11 @@ var Select = React.createClass({
 		matchPos: React.PropTypes.string,          // (any|start) match the start or entire string when filtering
 		matchProp: React.PropTypes.string,          // (any|label|value) which option property to filter on
 
+		createNewFromUndefined: React.PropTypes.bool,
+		newLabelPattern: React.PropTypes.string,
+		
+		onOptionSelected: React.PropTypes.func,
+		
 		/*
 		
 		* Allow user to make option label clickable. When this handler is defined we should
@@ -64,6 +69,10 @@ var Select = React.createClass({
 			matchPos: 'any',
 			matchProp: 'any',
 
+			createNewFromUndefined: false,
+			newLabelPattern: 'create %option',
+			onOptionSelected: undefined,
+			
 			onOptionLabelClick: undefined
 		};
 	},
@@ -204,11 +213,12 @@ var Select = React.createClass({
 
 	},
 
-	setValue: function(value) {
+	setValue: function(value, selectedOption) {
 		this._focusAfterUpdate = true;
 		var newState = this.getStateFromValue(value);
 		newState.isOpen = false;
-		this.fireChangeEvent(newState);
+
+		this.fireChangeEvent(newState, selectedOption);
 		this.setState(newState);
 	},
 
@@ -221,7 +231,7 @@ var Select = React.createClass({
 	},
 
 	addValue: function(value) {
-		this.setValue(this.state.values.concat(value));
+		this.setValue(this.state.values.concat(value), value);
 	},
 
 	popValue: function() {
@@ -250,9 +260,13 @@ var Select = React.createClass({
 		return this.props.searchable ? input : input.getDOMNode();
 	},
 
-	fireChangeEvent: function(newState) {
+	fireChangeEvent: function(newState, selectedOption) {
 		if (newState.value !== this.state.value && this.props.onChange) {
 			this.props.onChange(newState.value, newState.values);
+		}
+		
+		if (this.props.onOptionSelected) {
+			this.props.onOptionSelected(selectedOption);
 		}
 	},
 
@@ -358,11 +372,20 @@ var Select = React.createClass({
 			});
 		} else {
 			var filteredOptions = this.filterOptions(this.state.options);
+			var focusedOption = _.contains(filteredOptions, this.state.focusedOption) ? this.state.focusedOption : filteredOptions[0];
+			
+			if (!focusedOption && this.props.createNewFromUndefined) {
+				focusedOption = {
+					value: event.target.value,
+					label: event.target.value
+				};
+			}
+			
 			this.setState({
 				isOpen: true,
 				inputValue: event.target.value,
 				filteredOptions: filteredOptions,
-				focusedOption: _.contains(filteredOptions, this.state.focusedOption) ? this.state.focusedOption : filteredOptions[0]
+				focusedOption: focusedOption
 			});
 		}
 
@@ -427,7 +450,7 @@ var Select = React.createClass({
 		if (!this.props.searchable) {
 			return options;
 		}
-		
+
 		var filterValue = this._optionsFilterString;
 		var exclude = (values || this.state.values).map(function(i) {
 			return i.value;
@@ -521,28 +544,56 @@ var Select = React.createClass({
 		}
 	},
 
+	getMenuOption: function (op, isFocused, isNew) {
+		var optionClass = classes({
+			'Select-option': true,
+			'is-focused': isFocused
+		});
+
+		var ref = isFocused ? 'focused' : null;
+
+		var mouseEnter = this.focusOption.bind(this, op),
+			mouseLeave = this.unfocusOption.bind(this, op),
+			mouseDown = this.selectValue.bind(this, op);
+		
+		var label = !isNew ? op.label : (
+			<span>
+				{this.props.newLabelPattern.replace('%option', op.label)}
+			</span>
+		);
+		
+		return (
+			<div
+				ref={ref}
+				key={'option-' + op.value}
+				className={optionClass}
+				onMouseEnter={mouseEnter}
+				onMouseLeave={mouseLeave}
+				onMouseDown={mouseDown}
+				onClick={mouseDown}>
+				{label}
+			</div>
+		);
+	},
+	
 	buildMenu: function() {
-
 		var focusedValue = this.state.focusedOption ? this.state.focusedOption.value : null;
-
+		
 		var ops = _.map(this.state.filteredOptions, function(op) {
-			var isFocused = focusedValue === op.value;
-
-			var optionClass = classes({
-				'Select-option': true,
-				'is-focused': isFocused
-			});
-
-			var ref = isFocused ? 'focused' : null;
-
-			var mouseEnter = this.focusOption.bind(this, op),
-				mouseLeave = this.unfocusOption.bind(this, op),
-				mouseDown = this.selectValue.bind(this, op);
-
-			return <div ref={ref} key={'option-' + op.value} className={optionClass} onMouseEnter={mouseEnter} onMouseLeave={mouseLeave} onMouseDown={mouseDown} onClick={mouseDown}>{op.label}</div>;
-
+			return this.getMenuOption(op, focusedValue === op.value);
 		}, this);
 
+		if (this.props.createNewFromUndefined) {
+			if (this.state.inputValue.length) {
+				if (!ops.length) {
+					ops = [this.getMenuOption({
+						value: this.state.inputValue,
+						label: this.state.inputValue
+					}, true, true)];
+				}
+			}
+		}
+		
 		return ops.length ? ops : (
 			<div className="Select-noresults">
 				{this.props.asyncOptions && !this.state.inputValue ? this.props.searchPromptText : this.props.noResultsText}
@@ -600,6 +651,7 @@ var Select = React.createClass({
 			onFocus: this.handleInputFocus,
 			onBlur: this.handleInputBlur
 		};
+		
 		var input;
 
 		if (this.props.searchable && !this.props.disabled) {
